@@ -1,0 +1,22 @@
+LTspice 26.0.1 for Windows
+Circuit: C:\Users\Administrator\Downloads\Branch02_Tubelight_appliance.net
+Start Time: Sat May  9 14:39:55 2026
+Options:reltol=0.001 maxstep=100u method=gear
+solver = Normal
+Maximum thread count: 12
+tnom = 27
+temp = 27
+method = Gear
+Compress1stOrder = true
+Compress2ndOrder = true
+Direct Newton iteration succeeded in finding operating point.
+Total elapsed time: 0.413 seconds.
+
+Files loaded:
+C:\Users\Administrator\Downloads\Branch02_Tubelight_appliance.net
+
+vrms: RMS(V(MAINS)                     )=229.801418485 FROM 2.96 TO 3
+irms: RMS(I(V_AMMETER)                 )=0.532281173788 FROM 2.96 TO 3
+pavg: AVG(V(MAINS)*I(V_AMMETER)        )=83.8775339067 FROM 2.96 TO 3
+sapp: Vrms*Irms=122.318968769
+
