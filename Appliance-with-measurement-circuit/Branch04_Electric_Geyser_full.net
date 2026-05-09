@@ -1,0 +1,181 @@
+* =============================================================
+* SINGLE-APPLIANCE POWER MONITOR - ELECTRIC GEYSER
+* Base circuit + ACS712-20A + DG408 + MCP39F521
+* ELECTRIC GEYSER: 2000W @ 230V 50Hz (resistive, with thermostat relay)
+* =============================================================
+V1  N003  0  SINE(0 325 50 0 0 0 0)
+L1  N003  0     10    Rser=1m
+L2  0     N004  0.01  Rser=1m
+L4  N003  0     10    Rser=1m
+L5  N007  0     0.0047 Rser=1m
+L3  N005  0     0.01  Rser=1m
+K1  L1 L2 L3 0.99
+K2  L4 L5 0.99
+D1  N004  N001  1N4007
+D2  N006  N004  1N4007
+D3  N005  N001  1N4007
+D4  N006  N005  1N4007
+C1  N001  0     1000u  V=25
+C2  0     N006  1000u  V=25
+X§U1  0  N002  N001  LT1085-5  ;§pnba GND)OUT)IN
+X§U2  N006  NC_03  N008  N008  0  N006  NC_04  LT1175-5
+C3  N002  0     100u  V=15
+C4  0     N008  100u  V=15
+C5  N002  0     0.1u  V=16
+C6  0     N008  0.1u  V=16
+R1  N002  P001  10k
+R2  0     P002  10k
+D5  P001  0     1N4007
+D6  P002  N008  1N4007
+
+R3  N009  N007  100k
+R4  N010  N009  100k
+R6  N010  0     10k
+X§U3  N010  N011  N002  N008  N011  level2
++ Avol=1Meg GBW=10Meg Slew=10Meg Ilimit=25m Rail=0
++ Vos=0 En=0 Enk=0 In=0 Ink=0 Rin=500Meg
+
+V_AMMETER  N003  GY_LINE  DC 0
+
+X§U_ACS_GY  GY_NEUT  GY_NEUT  0  0  0  GY_FILT  GY_VIOUT  N002  ACS712_20A
+C_GY_FILT  GY_FILT  0  1n
+
+R_VOLTMETER  N003  0  1T
+
+V_GY_12V  GY_VCC12  0  DC 12
+V_GY_5V   GY_VCC5   0  DC 5
+V_GY_LM35  GY_SENS_RAW  0  PWL(0 0.250  22 0.600  22.001 0.600  60 0.555  60.001 0.555  82 0.600  82.001 0.600  120 0.558)
+R_GY_stop   GY_SENS_RAW  GY_SENS_IN  75
+C_GY_noise  GY_SENS_IN   0           100p
+R_GY_ref1  GY_VCC5    GY_POT_TOP  33k
+R_GY_pot   GY_POT_TOP GY_POT_WPR  2.1k
+R_GY_ref2  GY_POT_WPR GY_REF_OUT  4.7k
+R_GY_pull  GY_VCC5    GY_COMP_OUT  10k
+R_GY_hys   GY_COMP_OUT GY_SENS_IN  120k
+B_GY_comp  GY_COMP_OUT  0  V=IF(V(GY_SENS_IN) > V(GY_REF_OUT), 5, 0)
+C_GY_dec   GY_VCC5  0  100n
+R_GY_base  GY_COMP_OUT  GY_BASE_PNP  10k
+Q_GY1      GY_COIL_NEG  GY_BASE_PNP  GY_VCC12  2N2907_GY
+.model 2N2907_GY PNP(Is=650f Xti=3 Eg=1.11 Vaf=115 Bf=220 Ne=1.3 Ise=65f Ikf=1.1 Xtb=1.5 Br=4 Nc=2 Isc=0 Ikr=0 Rc=0.3 Cjc=9p Mjc=0.35 Vjc=0.6 Fc=0.5 Cje=25p Mje=0.3 Vje=0.65 Tr=190n Tf=0.6n)
+D_GY_fly   GY_COIL_NEG  GY_VCC12  GY_D1N4007
+.model GY_D1N4007 D(Is=4.35n Rs=0.5 N=1.975 Bv=1000 Cjo=10p)
+R_GY_coil  GY_VCC12  GY_COIL_NEG  80
+L_GY_coil  GY_VCC12  GY_COIL_NEG  50m
+S_GY_relay  GY_LINE  GY_ELEM_HOT  GY_COIL_NEG  0  GY_RELAY_SW
+.model GY_RELAY_SW SW(Ron=0.015 Roff=100Meg Vt=6 Vh=2)
+R_GY_elem    GY_ELEM_HOT  GY_ELEM_OUT  26.5
+L_GY_elem    GY_ELEM_OUT  GY_ELEM_NEG  3u
+R_GY_neutral  GY_ELEM_NEG  GY_NEUT  0.01
+B_GY_eco_latch  GY_ECO_LATCH  0  V=IF(V(GY_SENS_IN)>0.800, 0, 5)
+S_GY_eco  GY_LINE  GY_ECO_LINE  GY_ECO_LATCH  0  GY_ECO_SW
+.model GY_ECO_SW SW(Ron=0.002 Roff=500Meg Vt=4 Vh=1)
+R_GY_anode  GY_ELEM_HOT  0  1Meg
+
+V3  N013  0  15
+V5  0  N038  15
+V_A0  DA0  0  DC 5
+V_A1  DA1  0  DC 5
+V_A2  DA2  0  DC 0
+X§U8  0  N013  N002  DA0  DA1  DA2  N023  0  0  0  GY_VIOUT  0  0  0  0  N038  DG408
+R5  N002  0  10k
+
+X§U9  N023  N024  N002  N008  N024  level2
++ Avol=1Meg GBW=10Meg Slew=10Meg Ilimit=25m Rail=0
++ Vos=0 En=0 Enk=0 In=0 Ink=0 Rin=500Meg
+R11  N025  N024  10k
+R22  0     N025  10k
+R12  N028  N034  10k
+R13  N034_DIV  N002  1k
+R14  0         N034_DIV  1k
+X§U_REF  N034_DIV  N034  N002  N008  N034  level2
++ Avol=1Meg GBW=10Meg Slew=10Meg Ilimit=25m Rail=0
++ Vos=0 En=0 Enk=0 In=0 Ink=0 Rin=500Meg
+R15  N028  N017  10k
+R16  N018  N017  100k
+R17  N018  0     2k
+X§U10  N025  N028  N002  N008  N017  level2
++ Avol=1Meg GBW=10Meg Slew=10Meg Ilimit=25m Rail=0
++ Vos=0 En=0 Enk=0 In=0 Ink=0 Rin=500Meg
+X§U11  N018  N026  N002  N008  N026  level2
++ Avol=1Meg GBW=10Meg Slew=10Meg Ilimit=25m Rail=0
++ Vos=0 En=0 Enk=0 In=0 Ink=0 Rin=500Meg
+
+L6   N026  P003  10u  Rser=1m
+R18  N027  P003  1k
+C15  N027  0     33n
+L7   0     P004  10u  Rser=1m
+R19  N031  P004  1k
+C16  N031  0     33n
+L8   N011  P005  10u  Rser=1m
+R20  N032  P005  1k
+C17  N032  0     33n
+L9   0     P006  10u  Rser=1m
+R21  N035  P006  1k
+C18  N035  0     33n
+X§U12  N027  N031  N032  N035  0  NC_01  NC_02  N029  MCP39F521
+V7  N029  0  3.3
+
+.model D1N4007 D(Is=4.35n Rs=0.5 N=1.975 Bv=1000 Cjo=10p)
+.model D D
+
+.lib C:\Users\Administrator\AppData\Local\LTspice\lib\cmp\standard.dio
+.include C:\Users\Administrator\Documents\LTspice\lib\sub\ACS712.lib
+.include C:\Users\Administrator\Documents\LTspice\lib\sub\mcp.lib
+.lib C:\Users\Administrator\AppData\Local\LTspice\lib\sub\DG408.sub
+.lib C:\Users\Administrator\AppData\Local\LTspice\lib\sub\LT1083.lib
+.lib C:\Users\Administrator\AppData\Local\LTspice\lib\sub\LT1175-5.sub
+.lib C:\Users\Administrator\AppData\Local\LTspice\lib\sub\UniversalOpAmp2.lib
+
+.option reltol=0.01
+.option abstol=1n
+.option vntol=1m
+.option gminsteps=0
+.option srcsteps=100
+.option maxstep=1m
+.option method=gear
+.option plotwinsize=0
+.option numdgt=3
+.ic V(N002)=5
+.ic V(N008)=-5
+
+* =============================================================
+* TRANSIENT RUN: 3 minutes (180 s)
+* =============================================================
+.tran 0 180 0 1m
+
+* =============================================================
+* MEASUREMENTS
+* Window: 150-180 s (last 30 s, well past all transients)
+*
+* Direct (ideal-instrument) signals:
+*   V(N003)        = mains voltage  (across V_AMMETER+appliance)
+*   I(V_AMMETER)   = appliance current
+*
+* MCP-side signals (filtered inputs to MCP39F521 chip):
+*   V(N032)        = MCP voltage channel  (post-divider, post-buffer, post-LC)
+*   V(N027)        = MCP current channel  (post-ACS712, post-DG408, post-cond)
+*
+* Scaling factors (user-supplied):
+*   real V  = V(N032) * 983
+*   real I  = V(N027) / 0.00196
+* =============================================================
+
+* ----- Ideal voltmeter / ammeter (true values) -----
+.meas TRAN Vrms        RMS V(N003)                      FROM 150 TO 180
+.meas TRAN Irms        RMS I(V_AMMETER)                 FROM 150 TO 180
+.meas TRAN Pavg_calc   AVG V(N003)*I(V_AMMETER)         FROM 150 TO 180
+.meas TRAN Sapp_calc   PARAM Vrms*Irms
+
+* ----- MCP39F521 raw inputs (RMS at the MCP pins) -----
+.meas TRAN Vmcp_rms    RMS V(N032)                      FROM 150 TO 180
+.meas TRAN Imcp_rms    RMS V(N027)                      FROM 150 TO 180
+.meas TRAN Pmcp_raw    AVG V(N032)*V(N027)              FROM 150 TO 180
+
+* ----- MCP scaled back to real units -----
+.meas TRAN Vmcp_scaled PARAM Vmcp_rms*983
+.meas TRAN Imcp_scaled PARAM Imcp_rms/0.00196
+.meas TRAN Pmcp_scaled PARAM Vmcp_scaled*Imcp_scaled
+.meas TRAN Pmcp_true   PARAM Pmcp_raw*983/0.00196
+
+.backanno
+.end
