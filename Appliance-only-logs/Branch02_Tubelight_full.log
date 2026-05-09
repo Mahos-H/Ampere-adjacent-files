@@ -1,0 +1,42 @@
+LTspice 26.0.1 for Windows
+Circuit: C:\Users\Administrator\Downloads\Branch02_Tubelight_full.net
+Start Time: Sat May  9 13:36:10 2026
+Options:reltol=0.01 abstol=1n vntol=1m gminsteps=0 srcsteps=100 maxstep=1m method=gear plotwinsize=0 numdgt=4
+solver = Normal
+Maximum thread count: 12
+tnom = 27
+temp = 27
+method = Gear
+abstol = 1e-09
+reltol = 0.01
+volttol = 0.001
+Compress1stOrder = true
+Compress2ndOrder = true
+Direct Newton iteration failed to find operating point.
+Gmin stepping method for .op point skipped.
+Starting source stepping with srcstepmethod=0
+Source stepping succeeded in finding the operating point.
+
+Total elapsed time: 32.350 seconds.
+
+Files loaded:
+C:\Users\Administrator\Downloads\Branch02_Tubelight_full.net
+C:\Users\Administrator\AppData\Local\LTspice\lib\cmp\standard.dio
+C:\Users\Administrator\Documents\LTspice\lib\sub\ACS712.lib
+C:\Users\Administrator\Documents\LTspice\lib\sub\mcp.lib
+C:\Users\Administrator\AppData\Local\LTspice\lib\sub\DG408.sub
+C:\Users\Administrator\AppData\Local\LTspice\lib\sub\LT1083.lib
+C:\Users\Administrator\AppData\Local\LTspice\lib\sub\LT1175-5.sub
+C:\Users\Administrator\AppData\Local\LTspice\lib\sub\UniversalOpAmp2.lib
+
+vrms: RMS(V(N003)                      )=228.632646895 FROM 150 TO 180
+irms: RMS(I(V_AMMETER)                 )=0.522106720191 FROM 150 TO 180
+pavg_calc: AVG(V(N003)*I(V_AMMETER)         )=80.8077642789 FROM 150 TO 180
+sapp_calc: Vrms*Irms=119.370641399
+vmcp_rms: RMS(V(N032)                      )=0.23360968005 FROM 150 TO 180
+imcp_rms: RMS(V(N027)                      )=0.0010235353273 FROM 150 TO 180
+pmcp_raw: AVG(V(N032)*V(N027)              )=0.000161280953554 FROM 150 TO 180
+vmcp_scaled: Vmcp_rms*983=229.638315489
+imcp_scaled: Imcp_rms/0.00196=0.522211901681
+pmcp_scaled: Vmcp_scaled*Imcp_scaled=119.91986143
+pmcp_true: Pmcp_raw*983/0.00196=80.8873353795
