@@ -1,0 +1,91 @@
+* =============================================================
+* APPLIANCE-ONLY NETLIST - REFRIGERATOR
+* 150W compressor @ 230V 50Hz (cap-run, PTC start, thermostat duty)
+* Ideal voltage + current measurement only (no ACS712/DG408/MCP)
+* =============================================================
+
+V1          MAINS   0   SINE(0 325 50 0 0 0 0)
+
+* ---- Ideal ammeter (0 V series source) ----
+V_AMMETER   MAINS   RF_LINE   DC 0
+
+* ---- Ideal voltmeter (1 Tohm shunt across supply) ----
+R_VOLTMETER MAINS   0   1T
+
+* ---- Auxiliary supply rails for thermostat PCB ----
+V_RF_12V  RF_VCC12  0  DC 12
+V_RF_5V   RF_VCC5   0  DC 5
+
+* ---- Thermostat duty-cycle PWL & NTC divider ----
+V_RF_thermo   RF_THERMO_CTRL  0  PWL(0 5  22 5  22.001 0  60 0  60.001 5  82 5  82.001 0  120 0)
+V_RF_ntc_div  RF_NTC_DIV  0  PWL(0 3.55  22 4.10  22.001 4.10  60 3.55  60.001 3.55  82 4.10  82.001 4.10  120 3.55)
+
+* ---- Set-point divider ----
+R_RF_t     RF_VCC5  RF_VREF  3.3k
+R_RF_b     RF_VREF  0        10.7k
+
+* ---- Comparator ----
+B_RF_comp       RF_COMP_OUT  0  V=IF(V(RF_NTC_DIV) > V(RF_VREF), 5, 0)
+C_RF_comp_filt  RF_COMP_OUT  0  10u
+C_RF_dec        RF_VCC5  0  100n
+
+* ---- NPN relay driver ----
+R_RF_base  RF_COMP_OUT  RF_BASE_Q  7.4k
+Q_RF_drv   RF_COL_Q     RF_BASE_Q  0   RF_BC547
+.model RF_BC547 NPN(Is=1e-14 Bf=200 Vaf=100 Rc=0.5 Re=0.5 Cje=12p Cjc=6p Tf=0.5n)
+
+* ---- Relay coil + flyback ----
+R_RF_coil  RF_VCC12   RF_COIL_MID  80
+L_RF_coil  RF_COIL_MID  RF_COL_Q   50m
+D_RF_fly   RF_COL_Q  RF_VCC12  RF_D1N4007
+.model RF_D1N4007 D(Is=4.35n Rs=0.5 N=1.975 Bv=1000 Cjo=10p)
+
+* ---- Relay contact ----
+S_RF_relay  RF_LINE  RF_FUSE_LINE  RF_COL_Q  0  RF_RELAY_SW
+.model RF_RELAY_SW SW(Ron=0.02 Roff=100Meg Vt=6 Vh=2)
+
+* ---- Overload wire (sense resistor simulation) ----
+R_RF_sense    RF_FUSE_LINE  RF_OL_IN  0.1
+R_RF_ol_wire  RF_OL_IN  RF_MOTOR_LINE  0.001
+
+* ---- PTC starter (closes on power-up, opens after ~RC delay) ----
+R_RF_ptc_delay  RF_COL_Q  RF_PTC_CAP  2k
+C_RF_ptc_delay  RF_PTC_CAP  0          15u
+S_RF_ptc  RF_START_IN  RF_START_OUT  RF_PTC_CAP  0  RF_PTC_SW
+.model RF_PTC_SW SW(Ron=6.8 Roff=1Meg Vt=4 Vh=2)
+
+* ---- Compressor motor: main + start windings ----
+R_RF_main    RF_MOTOR_LINE  RF_MW_MID     300
+L_RF_main    RF_MW_MID      RF_MOTOR_NEG  0.8
+R_RF_start   RF_MOTOR_LINE  RF_START_IN   500
+L_RF_start   RF_START_OUT   RF_MOTOR_NEG  0.22
+C_RF_phase   RF_START_IN    RF_START_OUT  20u
+
+* ---- Neutral return ----
+R_RF_return  RF_MOTOR_NEG   0  0.01
+
+* ---- Door lamp (on when door open: t=10..12 s) ----
+V_RF_door  RF_DOOR_CTRL  0  PWL(0 5  10 5  10.001 0  12 0  12.001 5  120 5)
+S_RF_door   RF_LINE  RF_LAMP_IN  RF_DOOR_CTRL  0  RF_DOOR_SW
+.model RF_DOOR_SW SW(Ron=0.01 Roff=100Meg Vt=2.5 Vh=1)
+R_RF_lamp   RF_LAMP_IN  0  3527
+
+* =============================================================
+* SIMULATION: 120 s (covers two full thermostat cycles)
+* =============================================================
+.tran 0 120 0 1m
+
+* =============================================================
+* MEASUREMENTS  (window 90-120 s — steady duty cycle)
+* =============================================================
+.meas TRAN Vrms       RMS V(MAINS)                     FROM 90 TO 120
+.meas TRAN Irms       RMS I(V_AMMETER)                 FROM 90 TO 120
+.meas TRAN Pavg       AVG V(MAINS)*I(V_AMMETER)        FROM 90 TO 120
+.meas TRAN Sapp       PARAM Vrms*Irms
+
+
+.option reltol=0.001
+.option maxstep=1m
+.option method=gear
+.backanno
+.end

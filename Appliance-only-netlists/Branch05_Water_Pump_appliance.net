@@ -1,0 +1,49 @@
+* =============================================================
+* APPLIANCE-ONLY NETLIST - WATER PUMP
+* 1 HP ~1200W @ 230V 50Hz, PF=0.78 (capacitor-run induction motor)
+* Ideal voltage + current measurement only (no ACS712/DG408/MCP)
+* =============================================================
+
+V1          MAINS   0   SINE(0 325 50 0 0 0 0)
+
+* ---- Ideal ammeter (0 V series source) ----
+V_AMMETER   MAINS   WP_LINE   DC 0
+
+* ---- Ideal voltmeter (1 Tohm shunt across supply) ----
+R_VOLTMETER MAINS   0   1T
+
+* ---- Main winding (R+L series) ----
+* Rated: 1200W, PF=0.78 => I_main ≈ 6.72A
+* Z = 230/6.72 = 34.2 Ω, R = Z*PF = 26.7 Ω, X = Z*0.626 = 21.4 Ω
+* L = X/omega = 21.4/(2*pi*50) = 68.5 mH
+R_WP_main  WP_LINE    WP_MID_M   26.8
+L_WP_main  WP_MID_M   WP_NEUT    68.5m
+
+* ---- Auxiliary (run-cap) winding ----
+* Run capacitor shifts current 90° for starting torque
+C_WP_run   WP_LINE    WP_MID_A   10u
+R_WP_aux   WP_MID_A   WP_MID_B   35
+L_WP_aux   WP_MID_B   WP_NEUT    55m
+
+* ---- Neutral return ----
+R_WP_neut  WP_NEUT    0          0.001
+
+* =============================================================
+* SIMULATION: 3 s  (motor reaches steady state within ~0.5 s)
+* =============================================================
+.tran 0 3 0 100u
+
+* =============================================================
+* MEASUREMENTS  (last 2 cycles)
+* =============================================================
+.meas TRAN Vrms       RMS V(MAINS)                     FROM 2.96 TO 3.0
+.meas TRAN Irms       RMS I(V_AMMETER)                 FROM 2.96 TO 3.0
+.meas TRAN Pavg       AVG V(MAINS)*I(V_AMMETER)        FROM 2.96 TO 3.0
+.meas TRAN Sapp       PARAM Vrms*Irms
+
+
+.option reltol=0.001
+.option maxstep=100u
+.option method=gear
+.backanno
+.end

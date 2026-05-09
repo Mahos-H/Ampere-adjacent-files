@@ -1,0 +1,59 @@
+* =============================================================
+* APPLIANCE-ONLY NETLIST - ELECTRIC KETTLE
+* 2000W @ 230V 50Hz (resistive element + bimetal thermostat)
+* Ideal voltage + current measurement only (no ACS712/DG408/MCP)
+* =============================================================
+
+V1          MAINS   0   SINE(0 325 50 0 0 0 0)
+
+* ---- Ideal ammeter (0 V series source) ----
+V_AMMETER   MAINS   KT_LINE   DC 0
+
+* ---- Ideal voltmeter (1 Tohm shunt across supply) ----
+R_VOLTMETER MAINS   0   1T
+
+* ---- Bimetal thermostat latch (opens when water > 102 °C) ----
+B_KT_latch   KT_LATCH_CTRL  0  V=IF(V(KT_T_water)>102, 0, 5)
+S_KT_thermo  KT_LINE  KT_RELAY_CONTACT  KT_LATCH_CTRL  0  KT_THERMO_SW
+.model KT_THERMO_SW SW(Ron=0.003 Roff=500Meg Vt=4 Vh=1)
+
+* ---- Heating element (2000W => R = 230^2/2000 = 26.45 Ω) ----
+R_KT_elem    KT_RELAY_CONTACT  KT_ELEM_OUT  26.5
+L_KT_elem    KT_ELEM_OUT       KT_ELEM_NEG  3u
+
+* ---- Neutral return ----
+R_KT_neutral  KT_ELEM_NEG  0  0.01
+
+* ---- Thermal model: water temperature (°C above ambient) ----
+* Power deposited into 700-J/°C thermal mass, ~26 W/°C loss
+B_KT_heat_in  KT_T_raw  KT_T_amb  I = ABS(V(KT_RELAY_CONTACT,KT_ELEM_OUT))*ABS(I(R_KT_elem))/700
+C_KT_th_water KT_T_raw  KT_T_amb  350
+R_KT_th_loss  KT_T_raw  KT_T_amb  0.038
+V_KT_tamb     KT_T_amb  0         DC 25
+B_KT_T_water  KT_T_water  0  V = V(KT_T_raw)
+
+* ---- Neon indicator lamp (always live across supply) ----
+R_KT_neon_s  KT_LINE    KT_NEON_A  100k
+D_KT_neon    KT_NEON_A  KT_NEON_K  KT_NEON_MDL
+R_KT_neon_r  KT_NEON_K  0          1k
+.model KT_NEON_MDL D(Is=1n N=100 Bv=90 Ibv=1m)
+
+* =============================================================
+* SIMULATION: 180 s (kettle reaches boil ~120-160 s)
+* =============================================================
+.tran 0 180 0 1m
+
+* =============================================================
+* MEASUREMENTS  (window 150-180 s — steady boil or OFF state)
+* =============================================================
+.meas TRAN Vrms       RMS V(MAINS)                     FROM 150 TO 180
+.meas TRAN Irms       RMS I(V_AMMETER)                 FROM 150 TO 180
+.meas TRAN Pavg       AVG V(MAINS)*I(V_AMMETER)        FROM 150 TO 180
+.meas TRAN Sapp       PARAM Vrms*Irms
+
+
+.option reltol=0.001
+.option maxstep=1m
+.option method=gear
+.backanno
+.end

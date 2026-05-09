@@ -1,0 +1,61 @@
+* =============================================================
+* APPLIANCE-ONLY NETLIST - TUBELIGHT (T8 36W + magnetic ballast)
+* 80W total @ 230V 50Hz, PF~0.5 (magnetic ballast dominant)
+* Ideal voltage + current measurement only (no ACS712/DG408/MCP)
+* =============================================================
+
+V1          MAINS   0   SINE(0 325 50 0 0 0 0)
+
+* ---- Ideal ammeter (0 V series source) ----
+V_AMMETER   MAINS   TL_LINE   DC 0
+
+* ---- Ideal voltmeter (1 Tohm shunt across supply) ----
+R_VOLTMETER TL_LINE 0   1T
+
+* ---- Magnetic choke ballast (series inductor + ESR) ----
+* L = 1.0 H, Rser = 28 Ω (original values retained)
+L_TL_choke   TL_LINE       TL_CHOKE_OUT  1.0
+R_TL_choke   TL_CHOKE_OUT  TL_CHOKE_R    28
+
+* ---- Lamp filament resistance (filament 1 & 2, series) ----
+R_TL_fil1a   TL_CHOKE_R    TL_FIL1_HOT   6
+R_TL_fil1b   TL_FIL1_HOT   TL_FIL1_COLD  6
+R_TL_fil2a   TL_FIL2_HOT   TL_FIL2_COLD  6
+R_TL_fil2b   TL_FIL2_COLD  TL_NEUT       6
+
+* ---- Glow-starter: closes briefly then opens (original PWL timing) ----
+V_TL_gst    TL_GATE_ST   0  PWL(0 5  0.0219 5  0.0220 0)
+S_TL_start  TL_FIL1_COLD TL_FIL2_HOT  TL_GATE_ST   0  TL_START_SW
+.model TL_START_SW SW(Ron=0.5 Roff=500Meg Vt=2.5 Vh=0.5)
+
+* ---- Tube arc discharge (switch closes after ignition) ----
+V_TL_gtube  TL_GATE_TUBE  0  PWL(0 0  0.0229 0  0.0230 5)
+S_TL_tube   TL_FIL1_HOT   TL_FIL2_HOT  TL_GATE_TUBE  0  TL_TUBE_SW
+.model TL_TUBE_SW SW(Ron=250 Roff=500Meg Vt=2.5 Vh=0.5)
+
+* ---- Tube capacitance & PFC cap ----
+C_TL_tube   TL_FIL1_HOT  TL_FIL2_HOT  8p
+C_TL_pfc    TL_LINE  0  0.001p
+
+* ---- Neutral return ----
+R_TL_neut   TL_NEUT  0  0.001
+
+* =============================================================
+* SIMULATION: 3 s  (tube fully on after ~23 ms)
+* =============================================================
+.tran 0 3 0 100u
+
+* =============================================================
+* MEASUREMENTS  (last 2 cycles at steady state)
+* =============================================================
+.meas TRAN Vrms       RMS V(MAINS)                     FROM 2.96 TO 3.0
+.meas TRAN Irms       RMS I(V_AMMETER)                 FROM 2.96 TO 3.0
+.meas TRAN Pavg       AVG V(MAINS)*I(V_AMMETER)        FROM 2.96 TO 3.0
+.meas TRAN Sapp       PARAM Vrms*Irms
+
+
+.option reltol=0.001
+.option maxstep=100u
+.option method=gear
+.backanno
+.end

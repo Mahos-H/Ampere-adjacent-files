@@ -1,0 +1,83 @@
+* =============================================================
+* APPLIANCE-ONLY NETLIST - ELECTRIC GEYSER
+* 2000W @ 230V 50Hz (resistive element + relay thermostat)
+* Ideal voltage + current measurement only (no ACS712/DG408/MCP)
+* =============================================================
+
+V1          MAINS   0   SINE(0 325 50 0 0 0 0)
+
+* ---- Ideal ammeter (0 V series source) ----
+V_AMMETER   MAINS   GY_LINE   DC 0
+
+* ---- Ideal voltmeter (1 Tohm shunt across supply) ----
+R_VOLTMETER MAINS   0   1T
+
+* ---- Auxiliary supply rails for thermostat circuit ----
+V_GY_12V  GY_VCC12  0  DC 12
+V_GY_5V   GY_VCC5   0  DC 5
+
+* ---- LM35 sensor PWL (mV/°C: 10 mV/°C) ----
+V_GY_LM35  GY_SENS_RAW  0  PWL(0 0.250  22 0.600  22.001 0.600  60 0.555  60.001 0.555  82 0.600  82.001 0.600  120 0.558)
+R_GY_stop   GY_SENS_RAW  GY_SENS_IN  75
+C_GY_noise  GY_SENS_IN   0           100p
+
+* ---- Set-point resistor divider (~60 °C trip) ----
+R_GY_ref1  GY_VCC5    GY_POT_TOP  33k
+R_GY_pot   GY_POT_TOP GY_POT_WPR  2.1k
+R_GY_ref2  GY_POT_WPR GY_REF_OUT  4.7k
+
+* ---- Comparator + hysteresis ----
+R_GY_pull  GY_VCC5    GY_COMP_OUT  10k
+R_GY_hys   GY_COMP_OUT GY_SENS_IN  120k
+B_GY_comp  GY_COMP_OUT  0  V=IF(V(GY_SENS_IN) > V(GY_REF_OUT), 5, 0)
+C_GY_dec   GY_VCC5  0  100n
+
+* ---- PNP driver for relay coil ----
+R_GY_base  GY_COMP_OUT  GY_BASE_PNP  10k
+Q_GY1      GY_COIL_NEG  GY_BASE_PNP  GY_VCC12  2N2907_GY
+.model 2N2907_GY PNP(Is=650f Xti=3 Eg=1.11 Vaf=115 Bf=220 Ne=1.3 Ise=65f Ikf=1.1 Xtb=1.5 Br=4 Nc=2 Isc=0 Ikr=0 Rc=0.3 Cjc=9p Mjc=0.35 Vjc=0.6 Fc=0.5 Cje=25p Mje=0.3 Vje=0.65 Tr=190n Tf=0.6n)
+
+* ---- Relay coil + flyback diode ----
+D_GY_fly   GY_COIL_NEG  GY_VCC12  GY_D1N4007
+.model GY_D1N4007 D(Is=4.35n Rs=0.5 N=1.975 Bv=1000 Cjo=10p)
+R_GY_coil  GY_VCC12  GY_COIL_NEG  80
+L_GY_coil  GY_VCC12  GY_COIL_NEG  50m
+
+* ---- Relay contact switches mains to heating element ----
+S_GY_relay  GY_LINE  GY_ELEM_HOT  GY_COIL_NEG  0  GY_RELAY_SW
+.model GY_RELAY_SW SW(Ron=0.015 Roff=100Meg Vt=6 Vh=2)
+
+* ---- Heating element (2000W => 26.5 Ω) ----
+R_GY_elem    GY_ELEM_HOT  GY_ELEM_OUT  26.5
+L_GY_elem    GY_ELEM_OUT  GY_ELEM_NEG  3u
+
+* ---- Neutral return ----
+R_GY_neutral  GY_ELEM_NEG  0  0.01
+
+* ---- Economy (ECO) latch switch ----
+B_GY_eco_latch  GY_ECO_LATCH  0  V=IF(V(GY_SENS_IN)>0.800, 0, 5)
+S_GY_eco  GY_LINE  GY_ECO_LINE  GY_ECO_LATCH  0  GY_ECO_SW
+.model GY_ECO_SW SW(Ron=0.002 Roff=500Meg Vt=4 Vh=1)
+
+* ---- Anode bleed (avoids floating node) ----
+R_GY_anode  GY_ELEM_HOT  0  1Meg
+
+* =============================================================
+* SIMULATION: 180 s
+* =============================================================
+.tran 0 180 0 1m
+
+* =============================================================
+* MEASUREMENTS  (window 150-180 s)
+* =============================================================
+.meas TRAN Vrms       RMS V(MAINS)                     FROM 150 TO 180
+.meas TRAN Irms       RMS I(V_AMMETER)                 FROM 150 TO 180
+.meas TRAN Pavg       AVG V(MAINS)*I(V_AMMETER)        FROM 150 TO 180
+.meas TRAN Sapp       PARAM Vrms*Irms
+
+
+.option reltol=0.001
+.option maxstep=1m
+.option method=gear
+.backanno
+.end

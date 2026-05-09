@@ -1,0 +1,44 @@
+* =============================================================
+* APPLIANCE-ONLY NETLIST - CEILING FAN
+* 75W @ 230V 50Hz, PF=0.8 (inductive motor)
+* Ideal voltage + current measurement only (no ACS712/DG408/MCP)
+* =============================================================
+
+V1          MAINS   0   SINE(0 325 50 0 0 0 0)
+
+* ---- Ideal ammeter (0 V series source) ----
+V_AMMETER   MAINS   CF_LINE   DC 0
+
+* ---- Ideal voltmeter (1 Tohm shunt across supply) ----
+R_VOLTMETER MAINS   0   1T
+
+* ---- Ceiling Fan motor model (R+L series, 75W @ PF=0.8) ----
+* Z = 230/I, P = 75W => I = 75/(230*0.8)=0.408A
+* R = P/I^2 = 75/0.167 = 450 Ω, L = (X/omega) = Z*sin(phi)/2pi/50
+* X = Z*sqrt(1-PF^2), Z=230/0.408=564, X=564*0.6=338, L=338/(2*pi*50)=1.076H
+R_CF_motor  CF_LINE     CF_NODE_A   450
+L_CF_motor  CF_NODE_A   CF_NEUT     1.076
+R_CF_neut   CF_NEUT     0           0.001
+
+* =============================================================
+* SIMULATION: 5 full cycles (100ms) is enough; keep 3 cycles for
+* measurement. Using 3 s to match original steady-state window.
+* =============================================================
+.tran 0 3 0 100u
+
+* =============================================================
+* MEASUREMENTS  (last 2 cycles of a 3-second run, well past
+* any L start-up transient)
+* Node V(MAINS)  = mains voltage
+* I(V_AMMETER)  = appliance current (positive = into appliance)
+* =============================================================
+.meas TRAN Vrms       RMS V(MAINS)                     FROM 2.96 TO 3.0
+.meas TRAN Irms       RMS I(V_AMMETER)                 FROM 2.96 TO 3.0
+.meas TRAN Pavg       AVG V(MAINS)*I(V_AMMETER)        FROM 2.96 TO 3.0
+.meas TRAN Sapp       PARAM Vrms*Irms
+
+
+.option reltol=0.001
+.option method=gear
+.backanno
+.end

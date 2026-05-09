@@ -1,0 +1,46 @@
+* =============================================================
+* APPLIANCE-ONLY NETLIST - MICROWAVE OVEN
+* ~1000W output / ~1600W input @ 230V 50Hz
+* MOT (Microwave Oven Transformer) primary modelled as R+L series
+* Ideal voltage + current measurement only (no ACS712/DG408/MCP)
+* =============================================================
+
+V1          MAINS   0   SINE(0 325 50 0 0 0 0)
+
+* ---- Ideal ammeter (0 V series source) ----
+V_AMMETER   MAINS   MW_LINE   DC 0
+
+* ---- Ideal voltmeter (1 Tohm shunt across supply) ----
+R_VOLTMETER MAINS   0   1T
+
+* ---- MOT primary winding (R + L series) ----
+* Input power ~1600W @ 230V, PF~0.7 => I = 1600/(230*0.7) ≈ 9.94A
+* Z = 230/9.94 = 23.1 Ω, R = Z*0.7 = 16.2 Ω, X = Z*0.714 = 16.5 Ω
+* L = X/omega = 16.5/(2*pi*50) = 52.5 mH
+* Original netlist used R=45 Ω, L=0.1H (lower-power model at PF=0.45)
+* — retaining original values to stay faithful to source netlist
+R_MW_primary  MW_LINE      MW_PRIMARY_A  45
+L_MW_primary  MW_PRIMARY_A MW_NEUT       0.1
+
+* ---- Neutral return ----
+R_MW_neut   MW_NEUT  0  0.001
+
+* =============================================================
+* SIMULATION: 3 s  (purely linear — steady state from cycle 1)
+* =============================================================
+.tran 0 3 0 100u
+
+* =============================================================
+* MEASUREMENTS  (last 2 cycles)
+* =============================================================
+.meas TRAN Vrms       RMS V(MAINS)                     FROM 2.96 TO 3.0
+.meas TRAN Irms       RMS I(V_AMMETER)                 FROM 2.96 TO 3.0
+.meas TRAN Pavg       AVG V(MAINS)*I(V_AMMETER)        FROM 2.96 TO 3.0
+.meas TRAN Sapp       PARAM Vrms*Irms
+
+
+.option reltol=0.001
+.option maxstep=100u
+.option method=gear
+.backanno
+.end

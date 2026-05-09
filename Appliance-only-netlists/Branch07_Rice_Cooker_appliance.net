@@ -1,0 +1,66 @@
+* =============================================================
+* APPLIANCE-ONLY NETLIST - RICE COOKER
+* 500W cook -> 50W keep-warm @ 230V 50Hz (resistive, bimetal)
+* Ideal voltage + current measurement only (no ACS712/DG408/MCP)
+* =============================================================
+
+V1          MAINS   0   SINE(0 325 50 0 0 0 0)
+
+* ---- Ideal ammeter (0 V series source) ----
+V_AMMETER   MAINS   RC_LINE   DC 0
+
+* ---- Ideal voltmeter (1 Tohm shunt across supply) ----
+R_VOLTMETER MAINS   0   1T
+
+* ---- Temperature ramp PWL (°C vs time in seconds) ----
+* Pot reaches ~103 °C at ~900 s, then rises slowly to 105 °C
+V_RC_temp  RC_T_pot  0  PWL(0 25  899 102.9  900 103.1  1800 105)
+
+* ---- Cook / keep-warm logic ----
+B_RC_main_ctrl  RC_MAIN_CTRL  0  V = IF(V(RC_T_pot) < 103, 5, 0)
+B_RC_warm_ctrl  RC_WARM_CTRL  0  V = IF(V(RC_T_pot) >= 103, 5, 0)
+
+* ---- Main (cook) element switch + resistor ----
+* 500W @ 230V => R = 230^2/500 = 105.8 Ω
+S_RC_main   RC_LINE      RC_MAIN_IN   RC_MAIN_CTRL  0  RC_MAIN_SW
+.model RC_MAIN_SW SW(Ron=0.01 Roff=100Meg Vt=2.5 Vh=0.5)
+R_RC_main   RC_MAIN_IN   RC_NEUT      105.8
+
+* ---- Warm element switch + resistor ----
+* 50W @ 230V => R = 230^2/50 = 1058 Ω
+S_RC_warm   RC_LINE      RC_WARM_IN   RC_WARM_CTRL  0  RC_WARM_SW
+.model RC_WARM_SW SW(Ron=0.01 Roff=100Meg Vt=2.5 Vh=0.5)
+R_RC_warm   RC_WARM_IN   RC_NEUT      1058
+
+* ---- Neutral return ----
+R_RC_neut   RC_NEUT  0  0.001
+
+* =============================================================
+* SIMULATION:
+*   Phase A: 0-900 s    — cook mode (500W)
+*   Phase B: 900-1800 s — keep-warm mode (50W)
+* Measuring the COOK phase here (adjust FROM/TO for warm phase)
+* =============================================================
+.tran 0 1800 0 10m
+
+* =============================================================
+* MEASUREMENTS
+* Cook phase (850-900 s) and warm phase (1750-1800 s)
+* =============================================================
+.meas TRAN Vrms_cook    RMS V(MAINS)                     FROM 850  TO 900
+.meas TRAN Irms_cook    RMS I(V_AMMETER)                 FROM 850  TO 900
+.meas TRAN Pavg_cook    AVG V(MAINS)*I(V_AMMETER)        FROM 850  TO 900
+.meas TRAN Sapp_cook    PARAM Vrms_cook*Irms_cook
+
+
+.meas TRAN Vrms_warm    RMS V(MAINS)                     FROM 1750 TO 1800
+.meas TRAN Irms_warm    RMS I(V_AMMETER)                 FROM 1750 TO 1800
+.meas TRAN Pavg_warm    AVG V(MAINS)*I(V_AMMETER)        FROM 1750 TO 1800
+.meas TRAN Sapp_warm    PARAM Vrms_warm*Irms_warm
+
+
+.option reltol=0.001
+.option maxstep=10m
+.option method=gear
+.backanno
+.end
